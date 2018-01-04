@@ -90,11 +90,43 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   Complete this function! Make sure you switch between lidar and radar
   measurements.
   */
+  // Initialize if first run.
+  if (!is_initialized_) {
+    P_ = 0.15, 0, 0, 0, 0,
+         0, 0.15, 0, 0, 0,
+         0, 0, 0.15, 0, 0,
+         0, 0, 0, 0.15, 0,
+         0, 0, 0, 0, 0.15;
+    time_us_ = meas_package.timestamp_ - 1000000.0; // One second back in time.
+
+
+    if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
+      // If the measurement is a laser type.
+      x_ << measurement_pack.raw_measurements_[0],
+            measurement_pack.raw_measurements_[1],
+            0, 0, 0;
+    } else {
+      // If the measurement is a radar type.
+      float rho = measurement_pack.raw_measurements_[0];
+      float phi = measurement_pack.raw_measurements_[1];
+      float px = rho * cos(phi);
+      float py = rho * sin(phi);
+      x_ = px, py, 0, 0, 0;
+    }
+    is_initialized_ = true;
+    return;
+  }
   // Run prediction.
+  double delta_t = (meas_package.timestamp_ - time_us_) * 1000000.0;
+  Prediction(delta_t);
+  if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
+    // Update lidar measurement.
+    UpdateLidar(meas_package);
+  } else {
+    // Update radar measurement.
+    UpdateRadar(meas_package);
+  }
 
-  // Update lidar measurement.
-
-  // Update radar measurement.
 
 }
 
@@ -223,9 +255,8 @@ void UKF::Prediction(double delta_t) {
  */
 void UKF::UpdateLidar(MeasurementPackage meas_package) {
   /**
-  TODO:
 
-  Complete this function! Use lidar data to update the belief about the object's
+  Use lidar data to update the belief about the object's
   position. Modify the state vector, x_, and covariance, P_.
 
   You'll also need to calculate the lidar NIS.
@@ -299,7 +330,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
     while (x_diff(3)> M_PI) x_diff(3)-=2.*M_PI;
     while (x_diff(3)<-M_PI) x_diff(3)+=2.*M_PI;
 
-    Tc = Tc + weights(i) * x_diff * z_diff.transpose();
+    Tc = Tc + weights_(i) * x_diff * z_diff.transpose();
   }
 
   //Kalman gain K
@@ -411,7 +442,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     while (x_diff(3)> M_PI) x_diff(3)-=2.*M_PI;
     while (x_diff(3)<-M_PI) x_diff(3)+=2.*M_PI;
 
-    Tc = Tc + weights(i) * x_diff * z_diff.transpose();
+    Tc = Tc + weights_(i) * x_diff * z_diff.transpose();
   }
 
   //Kalman gain K;
