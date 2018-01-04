@@ -54,19 +54,18 @@ UKF::UKF() {
   */
   is_initialized_ = false;
 
-  Xsig_pred_ = MatrixXd(n_x, 2 * n_aug + 1);
 
   time_us_ = 0.0; // TODO: Initialize this as current time in microseconds.
-
-
 
   n_x_ = 5;
 
   n_aug_ = 7;
 
-  lambda_ = 3 - n_aug; // TODO: Does this need to be different on the 3?
+  lambda_ = 3 - n_aug_; // TODO: Does this need to be different on the 3?
 
-  weights_ = VectorXd(2*n_aug+1);
+  Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
+
+  weights_ = VectorXd(2*n_aug_+1);
 
   // set weights
   double weight_0 = lambda_/(lambda_+n_aug_);
@@ -92,7 +91,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   */
   // Initialize if first run.
   if (!is_initialized_) {
-    P_ = 0.15, 0, 0, 0, 0,
+    P_ << 0.15, 0, 0, 0, 0,
          0, 0.15, 0, 0, 0,
          0, 0, 0.15, 0, 0,
          0, 0, 0, 0.15, 0,
@@ -102,16 +101,16 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 
     if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
       // If the measurement is a laser type.
-      x_ << measurement_pack.raw_measurements_[0],
-            measurement_pack.raw_measurements_[1],
+      x_ << meas_package.raw_measurements_[0],
+            meas_package.raw_measurements_[1],
             0, 0, 0;
     } else {
       // If the measurement is a radar type.
-      float rho = measurement_pack.raw_measurements_[0];
-      float phi = measurement_pack.raw_measurements_[1];
+      float rho = meas_package.raw_measurements_[0];
+      float phi = meas_package.raw_measurements_[1];
       float px = rho * cos(phi);
       float py = rho * sin(phi);
-      x_ = px, py, 0, 0, 0;
+      x_ << px, py, 0, 0, 0;
     }
     is_initialized_ = true;
     return;
